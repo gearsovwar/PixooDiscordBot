@@ -1,0 +1,19 @@
+{
+  "name": "gif-js",
+  "version": "2.1.0",
+  "description": "",
+  "main": "libgif.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theonlyjohnny/libgif-js.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/theonlyjohnny/libgif-js/issues"
+  },
+  "homepage": "https://github.com/theonlyjohnny/libgif-js#readme"
+}

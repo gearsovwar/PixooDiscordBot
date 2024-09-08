@@ -1,0 +1,28 @@
+{
+  "name": "pixoobot",
+  "version": "1.0.0",
+  "description": "PixooBot for discord",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Gears",
+  "license": "ISC",
+  "dependencies": {
+    "@discordjs/builders": "^1.9.0",
+    "axios": "^1.7.7",
+    "canvas": "^2.11.2",
+    "discord.js": "^14.16.1",
+    "dotenv": "^16.4.5",
+    "gif-decoder": "^1.2.2",
+    "gif-encoder": "^0.7.2",
+    "gif-encoder-2": "^1.0.5",
+    "gif-extract-frames": "^1.0.2",
+    "gif-frames": "^1.0.1",
+    "gif-js": "^2.1.0",
+    "image-size": "^1.1.1",
+    "node-fetch": "^2.7.0",
+    "omggif": "^1.0.10",
+    "pixoo-api": "^0.2.3"
+  }
+}
