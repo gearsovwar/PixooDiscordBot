@@ -21,51 +21,6 @@ function getRGBBase64(canvas) {
     return rgbBuffer.toString('base64'); 
 }
 
-function applyDithering(canvas) {
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    const width = canvas.width;
-
-    for (let y = 0; y < canvas.height; y++) {
-        for (let x = 0; x < canvas.width; x++) {
-            const index = (y * width + x) * 4;
-
-            const oldPixel = data[index];
-            const newPixel = oldPixel < 128 ? 0 : 255; // Threshold for dithering
-            const error = oldPixel - newPixel;
-
-            data[index] = newPixel; // Red
-            data[index + 1] = newPixel; // Green
-            data[index + 2] = newPixel; // Blue
-
-            if (x + 1 < width) data[index + 4] += (error * 7) / 16;
-            if (y + 1 < canvas.height) {
-                if (x > 0) data[index + (width - 1) * 4] += (error * 3) / 16;
-                data[index + width * 4] += (error * 5) / 16;
-                if (x + 1 < width) data[index + (width + 1) * 4] += (error * 1) / 16;
-            }
-        }
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-}
-
-function applyGrayscale(canvas) {
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-
-    for (let i = 0; i < data.length; i += 4) {
-        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        data[i] = avg;     // Red
-        data[i + 1] = avg; // Green
-        data[i + 2] = avg; // Blue
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-}
-
 function resetgifid() {
     const payload = JSON.stringify({
         Command: "Draw/ResetHttpGifId"
