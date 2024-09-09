@@ -7,7 +7,7 @@ const imageBuffer = require('./imageBuffer'); // Import the shared image buffer
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('currentimage')
-        .setDescription('Get the last image sent to the Pixoo device'),
+        .setDescription('Get the last image or GIF frame sent to the Pixoo device'),
     async execute(interaction) {
         // Check if there is an image stored in the buffer
         if (imageBuffer.lastImage) {
@@ -38,15 +38,6 @@ module.exports = {
             ctx.imageSmoothingEnabled = false; // Turn off smoothing for a blocky effect
             ctx.drawImage(canvas, 0, 0, 64, 64, 0, 0, 256, 256); // Draw the image scaled up
 
-            // Add gridlines
-            const gridSize = 64;
-            const lineColor = 'gray';
-            const lineWidth = 1;
-
-            ctx.strokeStyle = lineColor;
-            ctx.lineWidth = lineWidth;
-
-
             // Save the image as a PNG file
             const outputPath = path.join(__dirname, 'lastImage.png');
             const out = fs.createWriteStream(outputPath);
@@ -60,12 +51,12 @@ module.exports = {
                 const attachment = new AttachmentBuilder(outputPath);
 
                 // Reply with the image as an attachment
-                await interaction.reply({ content: 'Here is the latest image sent to the Pixoo device:', files: [attachment] });
+                await interaction.reply({ content: 'Here is the latest image or GIF frame sent to the Pixoo device:', files: [attachment] });
             });
 
         } else {
             // If no image is available in the buffer
-            await interaction.reply('No image has been sent to the Pixoo device yet.');
+            await interaction.reply('No image or GIF has been sent to the Pixoo device yet.');
         }
     },
 };

@@ -4,53 +4,53 @@ const fetch = require('node-fetch');
 const { GifReader } = require('omggif');
 const path = require('path');
 const fs = require('fs');
+const imageBuffer = require('./imageBuffer'); // Import the shared image buffer
 
 async function resizeGif(url) {
-  const response = await fetch(url);
-  const arrayBuffer = await response.arrayBuffer();
-  const gifData = new Uint8Array(arrayBuffer);
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    const gifData = new Uint8Array(arrayBuffer);
 
-  const gifReader = new GifReader(gifData);
-  const numFrames = gifReader.numFrames();
+    const gifReader = new GifReader(gifData);
+    const numFrames = gifReader.numFrames();
 
-  const resizedFrames = [];
+    const resizedFrames = [];
 
-  for (let i = 0; i < numFrames; i++) {
-      const frameWidth = gifReader.frameInfo(i).width;
-      const frameHeight = gifReader.frameInfo(i).height;
+    for (let i = 0; i < numFrames; i++) {
+        const frameWidth = gifReader.frameInfo(i).width;
+        const frameHeight = gifReader.frameInfo(i).height;
 
-      const canvas = createCanvas(64, 64);
-      const ctx = canvas.getContext('2d');
+        const canvas = createCanvas(64, 64);
+        const ctx = canvas.getContext('2d');
 
-      const frameData = new Uint8Array(frameWidth * frameHeight * 4);
-      gifReader.decodeAndBlitFrameRGBA(i, frameData);
+        const frameData = new Uint8Array(frameWidth * frameHeight * 4);
+        gifReader.decodeAndBlitFrameRGBA(i, frameData);
 
-      const imageData = ctx.createImageData(64, 64);
-      for (let y = 0; y < 64; y++) {
-          for (let x = 0; x < 64; x++) {
-              const sx = Math.floor(x * frameWidth / 64);
-              const sy = Math.floor(y * frameHeight / 64);
-              const offset = (sy * frameWidth + sx) * 4;
-              const baseOffset = (y * 64 + x) * 4;
-              imageData.data[baseOffset] = frameData[offset];
-              imageData.data[baseOffset + 1] = frameData[offset + 1];
-              imageData.data[baseOffset + 2] = frameData[offset + 2];
-              imageData.data[baseOffset + 3] = frameData[offset + 3];
-          }
-      }
-      ctx.putImageData(imageData, 0, 0);
+        const imageData = ctx.createImageData(64, 64);
+        for (let y = 0; y < 64; y++) {
+            for (let x = 0; x < 64; x++) {
+                const sx = Math.floor(x * frameWidth / 64);
+                const sy = Math.floor(y * frameHeight / 64);
+                const offset = (sy * frameWidth + sx) * 4;
+                const baseOffset = (y * 64 + x) * 4;
+                imageData.data[baseOffset] = frameData[offset];
+                imageData.data[baseOffset + 1] = frameData[offset + 1];
+                imageData.data[baseOffset + 2] = frameData[offset + 2];
+                imageData.data[baseOffset + 3] = frameData[offset + 3];
+            }
+        }
+        ctx.putImageData(imageData, 0, 0);
 
-      const base64Data = getRGBBase64(canvas);
+        const base64Data = getRGBBase64(canvas);
 
-      // Debug output
-      console.log(`Frame ${i} base64 data length: ${base64Data.length}`);
+        resizedFrames.push(base64Data);
+    }
 
-      resizedFrames.push(base64Data);
-  }
+    // Save the last frame of the GIF to the image buffer
+    imageBuffer.lastImage = resizedFrames[resizedFrames.length - 1]; // Optionally, save the entire array
 
-  return resizedFrames;
+    return resizedFrames;
 }
-
 
 function getRGBBase64(canvas) {
     const ctx = canvas.getContext('2d');
