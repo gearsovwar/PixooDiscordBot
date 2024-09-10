@@ -1,0 +1,2 @@
+/// <reference types="node" />
+import GIFEncoder from'gif-encoder-2';declare type EditFrame=(ctx:CanvasRenderingContext2D,width:number,height:number,totalFrames:number,currentFrame:number,encoder:GIFEncoder)=>void;declare type Algorithm='neuquant'|'octree';interface Options{coalesce?:boolean;delay?:number;repeat?:number;algorithm?:Algorithm;optimiser?:boolean;fps?:number;quality?:number;}declare const _default:(input:string|Buffer,editFrame:EditFrame,options:Options)=>Promise<Buffer>;export=_default;

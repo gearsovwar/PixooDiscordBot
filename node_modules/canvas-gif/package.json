@@ -1,0 +1,42 @@
+{
+	"name": "canvas-gif",
+	"author": "newtykins",
+	"repository": "https://github.com/newtykins/canvas-gif",
+	"description": "Manipulate GIFs easily using node-canvas!",
+	"version": "1.0.3",
+	"main": "dist/index.js",
+	"license": "OQL",
+	"scripts": {
+		"build": "gulp"
+	},
+	"dependencies": {
+		"canvas": "^2.8.0",
+		"decode-gif": "^1.0.1",
+		"gif-encoder-2": "^1.0.5",
+		"gm": "^1.23.1"
+	},
+	"devDependencies": {
+		"@types/gm": "1.18.11",
+		"@types/node": "16.4.11",
+		"dts-minify": "^0.3.0",
+		"glob": "^7.2.0",
+		"gulp": "^4.0.2",
+		"gulp-cli": "^2.3.0",
+		"gulp-typescript": "^6.0.0-alpha.1",
+		"gulp-uglify": "^3.0.2",
+		"ttypescript": "^1.5.13",
+		"typescript": "4.3.5"
+	},
+	"keywords": [
+		"canvas",
+		"gif",
+		"encode",
+		"decode",
+		"node-canvas",
+		"image-editing",
+		"graphicsmagick",
+		"coalesce",
+		"editor",
+		"frame"
+	]
+}

@@ -1,80 +1,81 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { createCanvas } = require('canvas');
 const fetch = require('node-fetch');
-const { GifReader } = require('omggif');
-const path = require('path');
-const fs = require('fs');
+const GIF = require('@fand/gifuct-js');
+const sharp = require('sharp'); // Import sharp for resizing
 const imageBuffer = require('./imageBuffer'); // Import the shared image buffer
 
-async function resizeGif(url) {
+async function fetchAndDecodeGif(url) {
     const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch GIF: ${response.statusText}`);
+    }
     const arrayBuffer = await response.arrayBuffer();
-    const gifData = new Uint8Array(arrayBuffer);
+    return new GIF(new Uint8Array(arrayBuffer));
+}
 
-    const gifReader = new GifReader(gifData);
-    const numFrames = gifReader.numFrames();
+async function processGif(url) {
+    try {
+        const gif = await fetchAndDecodeGif(url);
+        const frames = await gif.decompressFrames(true);
 
-    const resizedFrames = [];
-
-    for (let i = 0; i < numFrames; i++) {
-        const frameWidth = gifReader.frameInfo(i).width;
-        const frameHeight = gifReader.frameInfo(i).height;
-
-        const canvas = createCanvas(64, 64);
-        const ctx = canvas.getContext('2d');
-
-        const frameData = new Uint8Array(frameWidth * frameHeight * 4);
-        gifReader.decodeAndBlitFrameRGBA(i, frameData);
-
-        const imageData = ctx.createImageData(64, 64);
-        for (let y = 0; y < 64; y++) {
-            for (let x = 0; x < 64; x++) {
-                const sx = Math.floor(x * frameWidth / 64);
-                const sy = Math.floor(y * frameHeight / 64);
-                const offset = (sy * frameWidth + sx) * 4;
-                const baseOffset = (y * 64 + x) * 4;
-                imageData.data[baseOffset] = frameData[offset];
-                imageData.data[baseOffset + 1] = frameData[offset + 1];
-                imageData.data[baseOffset + 2] = frameData[offset + 2];
-                imageData.data[baseOffset + 3] = frameData[offset + 3];
-            }
+        if (!frames.length) {
+            throw new Error('No frames found in the GIF');
         }
-        ctx.putImageData(imageData, 0, 0);
 
-        const base64Data = getRGBBase64(canvas);
-
-        resizedFrames.push(base64Data);
+        console.log(`Decoded ${frames.length} frames from GIF`);
+        return frames;
+    } catch (error) {
+        console.error('Error processing GIF:', error.message);
+        throw error;
     }
-
-    // Save the last frame of the GIF to the image buffer
-    imageBuffer.lastImage = resizedFrames[resizedFrames.length - 1]; // Optionally, save the entire array
-
-    return resizedFrames;
 }
 
-function getRGBBase64(canvas) {
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const { data } = imageData;
+function getRGBBase64(buffer) {
+    const rgbBuffer = Buffer.alloc(buffer.length / 4 * 3); // RGB format instead of RGBA
+    let rgbOffset = 0;
 
-    let rgbBuffer = Buffer.alloc(canvas.width * canvas.height * 3);
-    let offset = 0;
-
-    for (let i = 0; i < data.length; i += 4) {
-        rgbBuffer.writeUInt8(data[i], offset++);     // Red
-        rgbBuffer.writeUInt8(data[i + 1], offset++); // Green
-        rgbBuffer.writeUInt8(data[i + 2], offset++); // Blue
+    for (let i = 0; i < buffer.length; i += 4) {
+        rgbBuffer[rgbOffset++] = buffer[i];     // Red
+        rgbBuffer[rgbOffset++] = buffer[i + 1]; // Green
+        rgbBuffer[rgbOffset++] = buffer[i + 2]; // Blue
     }
 
-    return rgbBuffer.toString('base64'); 
+    return rgbBuffer.toString('base64');
 }
 
+async function resizeFrameTo64x64(frame) {
+    const { dims, patch } = frame;
+
+    // Convert frame data (patch) to raw image buffer
+    const rawImageBuffer = Buffer.from(patch);
+
+    // Use sharp to process the image
+    const resizedBuffer = await sharp(rawImageBuffer, {
+        raw: {
+            width: dims.width,
+            height: dims.height,
+            channels: 4, // Assuming GIF uses RGBA
+        },
+    })
+    .resize(64, 64) // Resize to 64x64
+    .toFormat('png') // Convert to PNG format
+    .flatten({ background: { r: 255, g: 255, b: 255 } }) // Remove transparency by adding white background
+    .toBuffer();
+
+    return resizedBuffer;
+}
+
+
+// Call this function only before the first GIF session or when resetting is required
 async function sendResetCommand() {
     const pixooUrl = `http://${process.env.PIXOO_IP}:80/post`;
 
     const payload = {
         Command: 'Draw/ResetHttpGifId',
     };
+
+    // Log the payload before sending it
+    console.log('Sending reset command with payload:', JSON.stringify(payload, null, 2));
 
     const options = {
         method: 'POST',
@@ -104,39 +105,79 @@ async function sendResetCommand() {
 async function sendGifToPixoo(frames, picID, picSpeed) {
     const pixooUrl = `http://${process.env.PIXOO_IP}:80/post`;
 
-    for (let i = 0; i < frames.length; i++) {
-        const payload = {
-            Command: 'Draw/SendHttpGif',
-            PicNum: frames.length,
-            PicWidth: 64, // assuming 64x64 resolution
-            PicOffset: i,
-            PicID: picID,
-            PicSpeed: picSpeed,
-            PicData: frames[i],
-        };
-
-        const options = {
+    // First, send the reset command if needed (you can skip this if not needed)
+    const resetPayload = { Command: "Draw/ResetHttpGifId" };
+    try {
+        console.log('Sending reset command with payload:', JSON.stringify(resetPayload, null, 2));
+        const resetRes = await fetch(pixooUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-        };
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(resetPayload),
+        });
+        if (!resetRes.ok) throw new Error(`Failed to reset: ${resetRes.status}`);
+        console.log('Reset command successful');
+    } catch (err) {
+        console.error(`Error sending reset command to Pixoo: ${err.message}`);
+        return; // Stop if the reset command fails
+    }
 
+    // Now process and send the first 60 frames
+    for (let i = 0; i < Math.min(frames.length, 60); i++) {
         try {
-            const res = await fetch(pixooUrl, options);
-            const responseText = await res.text(); // Get the response body as text
+            // Extract the frame pixel data (already Uint8ClampedArray)
+            const frameData = frames[i].patch; // This is Uint8ClampedArray of pixel data
+            const frameDims = frames[i].dims;
 
+            // Resize the frame to 64x64 using sharp
+            const resizedFrame = await sharp(Buffer.from(frameData), {
+                raw: {
+                    width: frameDims.width,
+                    height: frameDims.height,
+                    channels: 4 // Assuming RGBA, adjust if needed
+                }
+            })
+            .resize(64, 64) // Resize to 64x64
+            .raw()
+            .toBuffer(); // Get raw pixel data as buffer
+
+            // Convert the resized frame to RGB base64 format
+            const rgbBase64 = getRGBBase64(resizedFrame);
+
+            // Prepare the payload for the frame
+            const payload = {
+                Command: 'Draw/SendHttpGif',
+                PicNum: Math.min(frames.length, 60), // Total number of frames sent
+                PicWidth: 64,
+                PicOffset: i,
+                PicID: picID,
+                PicSpeed: picSpeed,
+                PicData: rgbBase64, // base64-encoded RGB frame data
+            };
+
+            // Log the JSON payload
+            console.log(`Sending frame ${i}:`);
+            console.log('JSON payload:', JSON.stringify(payload, null, 2));
+
+            // Send the frame to the Pixoo device
+            const res = await fetch(pixooUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const responseText = await res.text();
             console.log(`Response Status: ${res.status}`);
             console.log(`Response Text: ${responseText}`);
 
             if (res.ok) {
-                console.log(`Frame ${i} sent to Pixoo`);
+                console.log(`Frame ${i} sent successfully.`);
             } else {
-                console.error(`Failed to send frame ${i} to Pixoo. Status code: ${res.status}`);
+                console.error(`Failed to send frame ${i}. Status code: ${res.status}`);
             }
         } catch (err) {
-            console.error(`Error sending frame ${i} to Pixoo: ${err.message}`);
+            console.error(`Error processing frame ${i}: ${err.message}`);
         }
     }
 }
@@ -161,9 +202,9 @@ module.exports = {
             // Defer the reply, letting Discord know you'll respond later
             await interaction.deferReply();
 
-            // Retrieve and resize the GIF
+            // Retrieve and process the GIF
             console.log('Retrieved GIF URL:', attachment.url);
-            const resizedFrames = await resizeGif(attachment.url);
+            const frames = await processGif(attachment.url);
 
             // Initialize picID and speed
             let picID = Math.floor(Math.random() * 10000); // Unique ID for this animation
@@ -172,8 +213,8 @@ module.exports = {
             // Send reset command
             await sendResetCommand();
 
-            // Send the resized GIF to Pixoo
-            await sendGifToPixoo(resizedFrames, picID, picSpeed);
+            // Send the GIF to Pixoo
+            await sendGifToPixoo(frames, picID, picSpeed);
 
             // After processing, send the final response
             await interaction.editReply('GIF processing and sending completed.');

@@ -10,8 +10,10 @@
   "license": "ISC",
   "dependencies": {
     "@discordjs/builders": "^1.9.0",
+    "@fand/gifuct-js": "^1.0.0",
     "axios": "^1.7.7",
     "canvas": "^2.11.2",
+    "canvas-gif": "^1.0.3",
     "discord.js": "^14.16.1",
     "dotenv": "^16.4.5",
     "gif-decoder": "^1.2.2",
@@ -20,9 +22,12 @@
     "gif-extract-frames": "^1.0.2",
     "gif-frames": "^1.0.1",
     "gif-js": "^2.1.0",
+    "gifuct-js": "^2.1.2",
     "image-size": "^1.1.1",
     "node-fetch": "^2.7.0",
     "omggif": "^1.0.10",
-    "pixoo-api": "^0.2.3"
+    "pixoo-api": "^0.2.3",
+    "pngjs": "^7.0.0",
+    "sharp": "^0.33.5"
   }
 }
